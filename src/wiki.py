@@ -15,7 +15,7 @@ def process_team_picks(picks: defaultdict, n2id: dict) -> list:
                 {
                     "name": name,
                     "picks": pick,
-                    "icon": f"https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{n2id[name]}.png",
+                    "icon": f"https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{n2id[name.lower()]}.png",
                 }
             )
     return processed_picks
@@ -32,7 +32,7 @@ def process_bans(bans: defaultdict, n2id: dict) -> list:
             {
                 "name": name,
                 "count": count,
-                "icon": f"https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{n2id[name]}.png",
+                "icon": f"https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{n2id[name.lower()]}.png",
             }
         )
     return processed_bans

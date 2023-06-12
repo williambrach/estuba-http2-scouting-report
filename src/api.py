@@ -5,7 +5,7 @@ from typing import Union
 import requests
 from bs4 import BeautifulSoup
 from riotwatcher import ApiError, LolWatcher
-import json
+
 from constants import LOL_API_KEY, logger, n2id
 
 
@@ -127,7 +127,7 @@ def get_player_data_by_lolpros(url: str, last_n: int = 20) -> object:
                 "champion": champ,
                 "played": stats[0],
                 "win_rate": stats[1],
-                "icon": f"https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{n2id.get(champ,-1)}.png",
+                "icon": f"https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/{n2id.get(champ.lower(),-1)}.png",
             }
         )
     return player_data

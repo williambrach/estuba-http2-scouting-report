@@ -24,6 +24,7 @@ def get_champ_name_to_id() -> dict:
             new_k = k.replace(" ", "")
             new_n2id[new_k] = n2id[k]
     n2id.update(new_n2id)
+    n2id = {key.lower(): value for key, value in n2id.items()}
     return n2id
 
 
