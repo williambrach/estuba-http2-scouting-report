@@ -1,23 +1,36 @@
 from collections import defaultdict
+from datetime import datetime
 from typing import Union
 
 import requests
 from bs4 import BeautifulSoup
 from riotwatcher import ApiError, LolWatcher
-
+import json
 from constants import LOL_API_KEY, logger, n2id
+
+
+def check_if_in_last_2_weeks(timestamp: int) -> bool:
+    dt_utc_naive = datetime.utcfromtimestamp(timestamp / 1000)
+    current_date = datetime.now()
+    time_difference = current_date - dt_utc_naive
+    return time_difference.days <= 7
 
 
 def get_champions_played(
     region: str, summoner_name: str, champions: defaultdict, last_n: int = 20
 ) -> defaultdict:
     try:
-        watcher = LolWatcher(LOL_API_KEY,timeout=600)
+        watcher = LolWatcher(LOL_API_KEY, timeout=600)
         summoner = watcher.summoner.by_name(region, summoner_name)
-        match_history = watcher.match.matchlist_by_puuid(region, summoner["puuid"])
-        last_20_matches = match_history[:last_n]
+
+        games_per_acc = 0
+        match_history = watcher.match.matchlist_by_puuid(region, summoner["puuid"],queue=420,count=100)
+        last_20_matches = match_history
         for match in last_20_matches:
             match_data = watcher.match.by_id(match_id=match, region=region)
+            if not check_if_in_last_2_weeks(match_data["info"]["gameEndTimestamp"]):
+                break
+            games_per_acc += 1
             for player in dict(match_data)["info"]["participants"]:
                 if player["puuid"] == summoner["puuid"]:
                     champ_name = player["championName"]
@@ -25,6 +38,7 @@ def get_champions_played(
                     stat = champions[champ_name]
                     stat = (stat[0] + 1, stat[1] + win)
                     champions[champ_name] = stat
+        logger.info(f"{summoner_name} - found {games_per_acc} games")
         return champions
     except ApiError as err:
         logger.error(f"Error while retrieving summoner information: {err}")
@@ -79,10 +93,12 @@ def get_player_data_by_lolpros(url: str, last_n: int = 20) -> object:
     account_elements = soup.find_all(class_="account")
     account_ids = [element.text.strip() for element in account_elements]
 
-    # check if user has single acc 
+    # check if user has single acc
     if len(account_ids) == 0:
         account_elements = soup.find_all(class_="--opgg")
-        account_ids = [element['href'].split("=")[-1] for element in account_elements[:1]]
+        account_ids = [
+            element["href"].split("=")[-1] for element in account_elements[:1]
+        ]
     player_data = {"accounts": [], "history": []}
     player_champs = defaultdict(lambda: (0, 0))
     logger.info(f"player - {player_name} | ids found - {account_ids}")
