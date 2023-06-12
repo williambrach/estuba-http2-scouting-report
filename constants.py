@@ -17,6 +17,9 @@ def get_champ_name_to_id() -> dict:
 
     new_n2id = {}
     for k in n2id:
+        if "'" in k:
+            new_k = k.replace("'", "")
+            new_n2id[new_k] = n2id[k]
         if " " in k:
             new_k = k.replace(" ", "")
             new_n2id[new_k] = n2id[k]

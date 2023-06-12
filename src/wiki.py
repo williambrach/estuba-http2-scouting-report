@@ -41,7 +41,7 @@ def process_bans(bans: defaultdict, n2id: dict) -> list:
 def get_team_data_from_lol_wiki(team: str) -> Union[list, list, list]:
     # params
     # ----------------------
-    query = f"""https://lol.fandom.com/wiki/Special:RunQuery/MatchHistoryGame?MHG%5Bpreload%5D=Tournament&MHG%5Btournament%5D=Hitpoint+Masters%2F2023+Season%2FSpring+Season&MHG%5Bteam%5D={team}&MHG%5Bteam1%5D=&MHG%5Bteam2%5D=&MHG%5Bban%5D=&MHG%5Brecord%5D=&MHG%5Bascending%5D%5Bis_checkbox%5D=true&MHG%5Blimit%5D=&MHG%5Boffset%5D=&MHG%5Bregion%5D=&MHG%5Byear%5D=&MHG%5Bstartdate%5D=&MHG%5Benddate%5D=&MHG%5Bwhere%5D=&MHG%5Btextonly%5D%5Bis_checkbox%5D=true&_run=&pfRunQueryFormName=MatchHistoryGame"""
+    query = """https://lol.fandom.com/wiki/Hitpoint_2nd_Division_Challengers/2023_Season/Summer_Season/Match_History"""
     team_picks = {
         "top": defaultdict(lambda: 0),
         "jungle": defaultdict(lambda: 0),
@@ -92,23 +92,24 @@ def get_team_data_from_lol_wiki(team: str) -> Union[list, list, list]:
             "blue": row_data[2].find("a")["title"],
             "red": row_data[3].find("a")["title"],
             "winner": row_data[4].find("a")["title"],
-            "bans_red": [c["title"] for c in row_data[5].find_all("span")],
-            "bans_blue": [c["title"] for c in row_data[6].find_all("span")],
-            "picks_red": [c["title"] for c in row_data[7].find_all("span")],
-            "picks_blue": [c["title"] for c in row_data[8].find_all("span")],
+            "bans_red": [c["title"] for c in row_data[6].find_all("span")],
+            "bans_blue": [c["title"] for c in row_data[5].find_all("span")],
+            "picks_red": [c["title"] for c in row_data[8].find_all("span")],
+            "picks_blue": [c["title"] for c in row_data[7].find_all("span")],
         }
-        side = "blue" if team in str(row["blue"]).lower() else "red"
-        opponent = "red" if side == "blue" else "blue"
-        roles = list(team_picks.keys())
+        if team.lower() in row['blue'].lower() or team.lower() in row['red'].lower():
+            side = "blue" if team.lower() in row["blue"].lower() else "red"
+            opponent = "red" if side == "blue" else "blue"
+            roles = list(team_picks.keys())
 
-        for i, champ in enumerate(row[f"picks_{side}"]):
-            team_picks[roles[i]][champ] += 1
+            for i, champ in enumerate(row[f"picks_{side}"]):
+                team_picks[roles[i]][champ] += 1
 
-        for champ in row[f"bans_{side}"]:
-            bans[champ] += 1
+            for champ in row[f"bans_{side}"]:
+                bans[champ] += 1
 
-        for champ in row[f"bans_{opponent}"]:
-            bans_against[champ] += 1
+            for champ in row[f"bans_{opponent}"]:
+                bans_against[champ] += 1
 
     if not data_found:
         logger.error("No data found.")
@@ -125,6 +126,7 @@ def get_team_data_from_lol_wiki(team: str) -> Union[list, list, list]:
     # fix format
     # ----------------------
     team_picks_processed = process_team_picks(team_picks, n2id)
+    team_picks_processed = sorted(team_picks_processed, key=lambda x: x['picks'], reverse=True)
     bans_processed = process_bans(bans, n2id)
     bans_against_processed = process_bans(bans_against, n2id)
 

@@ -12,7 +12,7 @@ def get_champions_played(
     region: str, summoner_name: str, champions: defaultdict, last_n: int = 20
 ) -> defaultdict:
     try:
-        watcher = LolWatcher(LOL_API_KEY)
+        watcher = LolWatcher(LOL_API_KEY,timeout=600)
         summoner = watcher.summoner.by_name(region, summoner_name)
         match_history = watcher.match.matchlist_by_puuid(region, summoner["puuid"])
         last_20_matches = match_history[:last_n]
@@ -75,8 +75,14 @@ def get_player_data_by_lolpros(url: str, last_n: int = 20) -> object:
     player_name = url.split("/")[-1]
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
+    # check if user has more acc
     account_elements = soup.find_all(class_="account")
     account_ids = [element.text.strip() for element in account_elements]
+
+    # check if user has single acc 
+    if len(account_ids) == 0:
+        account_elements = soup.find_all(class_="--opgg")
+        account_ids = [element['href'].split("=")[-1] for element in account_elements[:1]]
     player_data = {"accounts": [], "history": []}
     player_champs = defaultdict(lambda: (0, 0))
     logger.info(f"player - {player_name} | ids found - {account_ids}")
