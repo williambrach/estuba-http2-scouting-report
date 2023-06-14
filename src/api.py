@@ -24,7 +24,9 @@ def get_champions_played(
         summoner = watcher.summoner.by_name(region, summoner_name)
 
         games_per_acc = 0
-        match_history = watcher.match.matchlist_by_puuid(region, summoner["puuid"],queue=420,count=100)
+        match_history = watcher.match.matchlist_by_puuid(
+            region, summoner["puuid"], queue=420, count=100
+        )
         last_20_matches = match_history
         for match in last_20_matches:
             match_data = watcher.match.by_id(match_id=match, region=region)
@@ -85,7 +87,14 @@ def calculate_win_rate(value: tuple) -> float:
     return round(wins / total_games * 100, 2) if total_games != 0 else 0
 
 
-def get_player_data_by_lolpros(url: str, last_n: int = 20) -> object:
+server2region = {
+    "euw" : "euw1",
+    "eune" : "eun1"
+}
+
+def get_player_data_by_lolpros(
+    url: str, last_n: int = 20, alts : list = []
+) -> object:
     player_name = url.split("/")[-1]
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -102,10 +111,19 @@ def get_player_data_by_lolpros(url: str, last_n: int = 20) -> object:
     player_data = {"accounts": [], "history": []}
     player_champs = defaultdict(lambda: (0, 0))
     logger.info(f"player - {player_name} | ids found - {account_ids}")
+
+    account_ids = account_ids + alts
     for account_id in account_ids:
-        opgg = f"https://www.op.gg/summoners/euw/{account_id}"
+        server = "euw"
+        region = "euw1"
+        if "#" in account_id:
+            server = account_id.split("#")[1].lower()
+            account_id = account_id.split("#")[0]
+            region = server2region[server]
+        opgg = f"https://www.op.gg/summoners/{server}/{account_id}"
+
         soloq_rank, flex_rank, champions = get_ranked_stats(
-            summoner_name=account_id, last_n=last_n
+            summoner_name=account_id, last_n=last_n, region=region
         )
         player_data["accounts"].append(
             {

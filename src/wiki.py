@@ -6,6 +6,14 @@ from bs4 import BeautifulSoup
 
 from constants import logger, n2id
 
+ROLE_ICONS = {
+    "top": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png",
+    "jungle": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-jungle.png",
+    "mid": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-middle.png",
+    "adc": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-bottom.png",
+    "supp": "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-utility.png",
+}
+
 
 def process_team_picks(picks: defaultdict, n2id: dict) -> list:
     processed_picks = []
@@ -43,28 +51,46 @@ def get_team_data_from_lol_wiki(team: str) -> Union[list, list, list]:
     # ----------------------
     query = """https://lol.fandom.com/wiki/Hitpoint_2nd_Division_Challengers/2023_Season/Summer_Season/Match_History"""
     team_picks = {
-        "top": defaultdict(lambda: 0),
-        "jungle": defaultdict(lambda: 0),
-        "mid": defaultdict(lambda: 0),
-        "adc": defaultdict(lambda: 0),
-        "supp": defaultdict(lambda: 0),
+        "blue": {
+            "top": defaultdict(lambda: 0),
+            "jungle": defaultdict(lambda: 0),
+            "mid": defaultdict(lambda: 0),
+            "adc": defaultdict(lambda: 0),
+            "supp": defaultdict(lambda: 0),
+        },
+        "red": {
+            "top": defaultdict(lambda: 0),
+            "jungle": defaultdict(lambda: 0),
+            "mid": defaultdict(lambda: 0),
+            "adc": defaultdict(lambda: 0),
+            "supp": defaultdict(lambda: 0),
+        },
     }
-    bans = defaultdict(lambda: 0)
-    bans_against = defaultdict(lambda: 0)
+    bans = {"red": defaultdict(lambda: 0), "blue": defaultdict(lambda: 0)}
+    bans_against = {"red": defaultdict(lambda: 0), "blue": defaultdict(lambda: 0)}
     data_found = False
     # ----------------------
     team_picks_processed = {
-        "top": [],
-        "jungle": [],
-        "mid": [],
-        "adc": [],
-        "supp": [],
+        "blue": {
+            "top": [],
+            "jungle": [],
+            "mid": [],
+            "adc": [],
+            "supp": [],
+        },
+        "red": {
+            "top": [],
+            "jungle": [],
+            "mid": [],
+            "adc": [],
+            "supp": [],
+        },
     }
     bans_processed = []
     bans_against_processed = []
     logger.info(f"Looking for team - {team}")
     logger.info(f"Query url - {query}")
-
+    roles = ["top", "jungle", "mid", "adc", "supp"]
     # process html
     # ----------------------
     try:
@@ -97,38 +123,52 @@ def get_team_data_from_lol_wiki(team: str) -> Union[list, list, list]:
             "picks_red": [c["title"] for c in row_data[8].find_all("span")],
             "picks_blue": [c["title"] for c in row_data[7].find_all("span")],
         }
-        if team.lower() in row['blue'].lower() or team.lower() in row['red'].lower():
+        if team.lower() in row["blue"].lower() or team.lower() in row["red"].lower():
             side = "blue" if team.lower() in row["blue"].lower() else "red"
             opponent = "red" if side == "blue" else "blue"
-            roles = list(team_picks.keys())
 
             for i, champ in enumerate(row[f"picks_{side}"]):
-                team_picks[roles[i]][champ] += 1
+                team_picks[side][roles[i]][champ] += 1
 
             for champ in row[f"bans_{side}"]:
-                bans[champ] += 1
+                bans[side][champ] += 1
 
             for champ in row[f"bans_{opponent}"]:
-                bans_against[champ] += 1
+                bans_against[side][champ] += 1
 
     if not data_found:
         logger.error("No data found.")
         return [], [], []
-
     # sort dicts
     # ----------------------
-    for role in roles:
-        team_picks[role] = sort_dictionary(team_picks[role])
+    for side in ["red", "blue"]:
+        for role in roles:
+            team_picks[side][role] = sort_dictionary(team_picks[side][role])
 
-    bans = sort_dictionary(bans)
-    bans_against = sort_dictionary(bans_against)
 
-    # fix format
-    # ----------------------
-    team_picks_processed = process_team_picks(team_picks, n2id)
-    team_picks_processed = sorted(team_picks_processed, key=lambda x: x['picks'], reverse=True)
-    bans_processed = process_bans(bans, n2id)
-    bans_against_processed = process_bans(bans_against, n2id)
+
+    team_picks_processed = {}
+    for color in ['red', 'blue']:
+        team_picks_processed[color] = sorted(
+            process_team_picks(team_picks[color], n2id),
+            key=lambda x: x["picks"],
+            reverse=True
+        )
+
+    bans['blue'] = sort_dictionary(bans['blue'])
+    bans['red'] = sort_dictionary(bans['red'])
+
+    bans_against['blue'] = sort_dictionary(bans_against['blue'])
+    bans_against['red'] = sort_dictionary(bans_against['red'])
+
+    bans_processed = {}
+    for color in ['red', 'blue']:
+        bans_processed[color] = process_bans(bans[color], n2id)
+
+    bans_against_processed = {}
+    for color in ['red', 'blue']:
+        bans_against_processed[color] = process_bans(bans_against[color], n2id)
+
 
     logger.info(f"{team} parsing successful")
     return team_picks_processed, bans_processed, bans_against_processed
